@@ -30,30 +30,40 @@ def gray(image):
     return image[:, :, 1]
 # %%
 # lagrer avi fil i variabel
-avi_file = "TrackingData/B_DF_15s_7_5fps_3.avi"
+avi_file = "TrackingData/A_DF_40x_15s_5fps_1_cropped-1.avi"
 # %%
 # pims.Video henter avi fil, og bruker gray() til gray channel
-frames = gray(pims.Video(avi_file))
-f = tp.batch(frames[:-1], 21, invert=True)
+frames = gray(pims.open(avi_file))
+
 # %%
-tp.quiet()
-t=tp.link(f, 5, memory=5)
-# %% 
+f = tp.locate(frames[0], 43)
+tp.annotate(f, frames[0])
+
+# %%
 fig, ax = plt.subplots()
 ax.hist(f['mass'], bins=20)
-ax.set(xlabel='mass', ylabel='count')
+
 # %%
-t1 = tp.filter_stubs(t,25)
+f = tp.locate(frames[0], 43, minmass=2000)
+tp.annotate(f, frames[0])
+
+# %%
+f = tp.batch(frames[:], 43, minmass = 2000)
+# %%
+t = tp.link(f, 5, memory=3)
+t.head()
+# %%
+t1 = tp.filter_stubs(t, 25)
 print('Before:', t['particle'].nunique())
 print('After:', t1['particle'].nunique())
 # %%
 plt.figure()
 tp.mass_size(t1.groupby('particle').mean())
-#%%
-t2 = t1[((t1['mass'] < 30000) & (t1['size'] < 40) & (t1['ecc'] > 0.00000003))]
-plt.figure()
-tp.annotate(t2[t2['frame'] == 0], frames[0])
 # %%
+t2 = t1[((t1['mass'] > 50) & (t1['size'] < 10) & (t1['ecc'] < 3))]
+plt.figure()
+tp.annotate(t2[t2['frame']==0], frames[0])
+# %% 
 plt.figure()
 tp.plot_traj(t2)
 # %%
@@ -61,25 +71,18 @@ d = tp.compute_drift(t2)
 d.plot()
 plt.show()
 # %%
-tm = tp.subtract_drift(t2.copy(), d)
-ax = tp.plot_traj(tm)
-plt.show()
+# im = tp.imsd(tm, 100/285., 5)
+# fig, ax = plt.subplots()
+# ax.plot(im.index, im, 'k-', alpha=0.1)
+# ax.set_xscale('log')
+# ax.set_yscale('log')
 # %%
-em = tp.emsd(tm,125/48., 7.5)
-# %%
+em = tp.emsd(tm, 1, 24)
 fig, ax = plt.subplots()
-ax.plot(em.index, em, 'o')
-ax.set(ylabel=r'$\langle \Delta r^2 \rangle$ [$\mu$m$^2$]', xlabel = 'lag time $t$')
+ax.plot(em.index,em,'o')
 ax.set_xscale('log')
 ax.set_yscale('log')
-# ax.set(ylim=(1e-2,10))
 # %%
 plt.figure()
-plt.ylabel(r'$\langle \Delta r^2 \rangle$ [$\mu$m$^2$]')
-plt.xlabel('lag time $t$')
 tp.utils.fit_powerlaw(em)
-
-
-
-
 
